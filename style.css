@@ -298,13 +298,21 @@ button {
     margin-bottom: 0.5rem;
 }
 
-.uni-content .description {
+/* .uni-content .description {
     font-size: 1rem;
     white-space: pre-wrap;
     margin-bottom: 1rem;
     line-height: 1.6;
+} */
+.uni-content .description {
+    font-size: 1rem;
+    /* This preserves line breaks (Enter key) and normal wrapping */
+    white-space: pre-wrap; 
+    /* This forces long words or URLs to break and wrap to the next line */
+    word-break: break-word; 
+    margin-bottom: 1rem;
+    line-height: 1.6;
 }
-
 .card-actions {
     display: flex;
     gap: 1.5rem;
@@ -361,14 +369,26 @@ button {
     box-shadow: var(--shadow-sm);
 }
 
-.search-input-header input {
+/* .search-input-header input {
     flex: 1;
     border: none;
     background: transparent;
     font-size: 1.1rem;
     color: var(--text-dark);
+} */
+.search-input-header textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    resize: none; /* Prevents manual resizing handles */
+    font-family: inherit;
+    padding: 10px 0; /* Adjust vertical alignment */
+    min-height: 45px; /* Matches the avatar height */
+    max-height: 200px; /* Optional limit */
+    overflow-y: auto; /* Scroll if it gets too big */
 }
-
 .btn-primary {
     background-color: var(--primary-blue);
     color: white;
@@ -617,14 +637,26 @@ button {
         padding: 1.2rem;
     }
 
-    .search-input-header input {
+    /* .search-input-header input {
         width: 100%;
         text-align: center;
         background: rgba(0, 0, 0, 0.03);
         padding: 10px;
         border-radius: 8px;
-    }
-
+    } */
+.search-input-header textarea {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    resize: none; /* Prevents manual resizing handles */
+    font-family: inherit;
+    padding: 10px 0; /* Adjust vertical alignment */
+    min-height: 45px; /* Matches the avatar height */
+    max-height: 200px; /* Optional limit */
+    overflow-y: auto; /* Scroll if it gets too big */
+}
     .search-input-header img {
         width: 50px;
         height: 50px;

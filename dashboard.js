@@ -14,8 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             currentUser = user;
             const avatar = document.getElementById('userAvatarSmall');
-            // Welcome text is handled by greetings.js now, safe to skip here
-            
             if(avatar) avatar.src = user.photoURL || 'images/user.png';
         } else {
             window.location.href = 'login.html';
@@ -26,10 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const publishBtn = document.getElementById('publishBtn');
     if(publishBtn) publishBtn.addEventListener('click', handlePublish);
     
+    // --- CHANGED: Auto-resize logic instead of Enter-to-Submit ---
     const postInput = document.getElementById('postInput');
     if(postInput) {
-        postInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handlePublish();
+        postInput.addEventListener('input', function() {
+            this.style.height = 'auto'; // Reset height
+            this.style.height = (this.scrollHeight) + 'px'; // Grow to fit content
         });
     }
 });
@@ -48,6 +48,7 @@ async function handlePublish() {
 
     if (result.success) {
         input.value = ''; 
+        input.style.height = 'auto'; // Reset height after publish
         await loadFeed(); 
     } else {
         alert("حصلت مشكلة: " + result.error);
@@ -97,8 +98,6 @@ function createPostHTML(post) {
         else if (seconds > 60) timeAgo = `من ${Math.floor(seconds / 60)} دقيقة`;
     }
 
-    // --- Link to User Profile ---
-    // If it's me, go to profile.html, else go to user.html?uid=...
     const profileLink = isAuthor 
         ? 'profile.html' 
         : `user.html?uid=${post.authorId}`;
@@ -108,7 +107,6 @@ function createPostHTML(post) {
             <div class="uni-content">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     
-                    <!-- User Info Section (Clickable) -->
                     <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 1rem;">
                         <a href="${profileLink}" style="text-decoration: none; display: flex; gap: 10px; align-items: center;">
                             <img src="${post.authorImage}" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--border-color); object-fit: cover;">
@@ -128,7 +126,7 @@ function createPostHTML(post) {
                     ` : ''}
                 </div>
                 
-                <p class="description" style="white-space: pre-wrap;">${escapeHtml(post.content)}</p>
+                <p class="description">${escapeHtml(post.content)}</p>
             </div>
             
             <div class="card-actions">
