@@ -298,7 +298,7 @@ function createProfilePostHTML(post) {
                 </div>
             </div>
 
-            <div class="comments-section" id="comments-section-${post.id}" style="display: none; background: #fafafa; padding: 10px; margin-top: 10px; border-radius: 8px;">
+            <div class="comments-section" id="comments-section-${post.id}" style="display: none;  padding: 10px; margin-top: 10px; border-radius: 8px;">
                 <div class="comment-list" id="comment-list-${post.id}" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;">
                     <div style="text-align:center; font-size:0.8rem; color:grey;">
                         <i class="fa-solid fa-spinner fa-spin"></i> تحميل...
