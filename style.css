@@ -900,7 +900,15 @@ selector::-webkit-scrollbar-thumb:hover {
 }
 
 /* Text Colors for Active State */
-.reacted-text { font-weight: bold; }
+.reacted-text { font-weight: bold; 
+
+  user-select: none;
+  /* For older browser compatibility, include vendor prefixes */
+  -webkit-user-select: none; /* Safari, Chrome, Opera */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Internet Explorer/Edge */
+
+}
 .color-like { color: var(--primary-blue); }
 .color-love { color: #e0245e; }
 .color-haha { color: #f7b928; }
@@ -1048,4 +1056,13 @@ selector::-webkit-scrollbar-thumb:hover {
 .secret-card {
     position: relative;
     /* We handle background in JS injectStyles, but fallback here */
+}
+
+
+.disable-selection {
+  user-select: none;
+  /* For older browser compatibility, include vendor prefixes */
+  -webkit-user-select: none; /* Safari, Chrome, Opera */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Internet Explorer/Edge */
 }
