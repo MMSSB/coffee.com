@@ -75,19 +75,21 @@ html {
 }
 
 #scrollToTopBtn {
-  display: none; /* Hidden by default */
-  position: fixed; /* Fixed position */
-  bottom: 20px; /* Distance from bottom */
-  right: 30px; /* Distance from right */
-  z-index: 99; /* Ensure it's above other elements */
-  border: none; /* Remove borders */
-  outline: none; /* Remove outline on focus */
-  background-color: #555; /* Background color */
-  color: white; /* Text color */
-  cursor: pointer; /* Pointer cursor on hover */
-  padding: 15px; /* Some padding */
-  border-radius: 10px; /* Rounded corners */
-  font-size: 18px; /* Increase font size */
+  display: none;
+  width: 50px;
+  position: fixed;
+  bottom: 20px;
+  right: 30px;
+  z-index: 99;
+  border: none;
+  outline: none;
+  background-color: var(--accent-yellow);
+ color: white;
+  cursor: pointer;
+  padding: 13px;
+  border-radius: 50%;
+font-size: 18px;
+
 }
 
 #scrollToTopBtn:hover {
@@ -828,4 +830,222 @@ selector::-webkit-scrollbar-thumb:hover {
     padding: 3rem 2rem;
     margin-top: auto;
     border-top: 4px solid var(--border-color);
+}
+
+
+
+
+
+/* --- Reaction System (نظام التفاعل) --- */
+.reaction-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* The floating container for emojis */
+.reaction-picker {
+    position: absolute;
+    bottom: 120%; /* Position above the button */
+    right: -10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 50px;
+    display: flex;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    
+    /* Animation settings */
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+}
+
+/* Show picker on hover */
+.reaction-wrapper:hover .reaction-picker {
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Individual Emoji Styles */
+.reaction-emoji {
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    user-select: none;
+}
+
+.reaction-emoji:hover {
+    transform: scale(1.3) translateY(-5px);
+}
+
+/* Tooltip for the Reaction Name (e.g. "هبد") */
+.reaction-emoji:hover::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    pointer-events: none;
+    margin-bottom: 5px;
+}
+
+/* Text Colors for Active State */
+.reacted-text { font-weight: bold; }
+.color-like { color: var(--primary-blue); }
+.color-love { color: #e0245e; }
+.color-haha { color: #f7b928; }
+.color-wow { color: #17bf63; }
+.color-angry { color: #de3e1a; }
+.color-dislike { color: #6d6d6d; } /* Grey for Habd */
+
+
+
+
+/* --- Comments System (التلقيح) --- */
+.comments-section {
+    border-top: 1px solid var(--border-color);
+    margin-top: 10px;
+    padding-top: 15px;
+    display: none; /* Hidden by default */
+    background: rgba(0,0,0,0.02);
+    padding: 15px;
+    border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.comments-section.show {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.comment-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.comment-item {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+}
+
+.comment-bubble {
+    background: var(--bg-card);
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    flex: 1;
+    position: relative;
+}
+
+.comment-author {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--primary-blue);
+    margin-bottom: 2px;
+}
+
+.comment-text {
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.comment-time {
+    font-size: 0.7rem;
+    color: var(--text-grey);
+    margin-top: 4px;
+    display: block;
+    text-align: left;
+}
+
+/* Comment Input Area */
+.comment-input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    position: relative;
+}
+
+.comment-input {
+    flex: 1;
+    padding: 10px 15px;
+    padding-left: 40px; /* Space for send button */
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-dark);
+    font-family: inherit;
+    resize: none;
+    height: 42px; /* Fixed height initially */
+    line-height: 20px;
+    overflow: hidden;
+}
+
+.comment-input:focus {
+    border-color: var(--primary-blue);
+}
+
+.btn-send-comment {
+    position: absolute;
+    left: 10px; /* Arabic layout (LTR flipped) or just absolute positioning */
+    background: none;
+    border: none;
+    color: var(--primary-blue);
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: 5px;
+    transition: transform 0.2s;
+}
+
+.btn-send-comment:hover {
+    transform: scale(1.1);
+}
+
+
+
+
+
+
+/* Fadfada Specific Styles */
+.secret-input-box textarea {
+    background: transparent;
+    color: var(--text-dark);
+}
+.secret-input-box {
+    background: #fff;
+    border: 2px solid #2C1810;
+}
+[data-theme="dark"] .secret-input-box {
+    background: #2C1810;
+    border: 2px solid #C19A6B;
+}
+
+/* Distinct card style for secrets */
+.secret-card {
+    position: relative;
+    /* We handle background in JS injectStyles, but fallback here */
 }
