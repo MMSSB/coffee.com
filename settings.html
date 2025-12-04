@@ -60,7 +60,7 @@
                 <h1 style="margin-bottom:1.5rem; color: var(--primary-blue);">إعدادات القهوة</h1>
 
                 <!-- Appearance Section -->
-                <div class="settings-section">
+                <!-- <div class="settings-section">
                     <h2><i class="fa-solid fa-paint-brush"></i> المظهر والديكور</h2>
                     <p style="color: var(--text-grey); margin-bottom: 1rem;">اختار الإضاءة اللي تريح عينك وانت قاعد.</p>
                     
@@ -72,14 +72,29 @@
                             <i class="fa-solid fa-moon"></i> سهرة (غامق)
                         </button>
                     </div>
-                </div>
-
+                </div> -->
+<div class="settings-section">
+    <h2><i class="fa-solid fa-paint-brush"></i> المظهر والديكور</h2>
+    <p style="color: var(--text-grey); margin-bottom: 1rem;">اختار الإضاءة اللي تريح عينك وانت قاعد.</p>
+    
+    <div style="display: flex; gap: 10px;">
+        <button class="btn-outline" onclick="setTheme('light')" id="btn-light" style="flex:1;">
+            <i class="fa-solid fa-sun"></i> نهار (فاتح)
+        </button>
+        <button class="btn-outline" onclick="setTheme('dark')" id="btn-dark" style="flex:1;">
+            <i class="fa-solid fa-moon"></i> سهرة (غامق)
+        </button>
+        <button class="btn-outline" onclick="setTheme('system')" id="btn-system" style="flex:1;">
+            <i class="fa-solid fa-desktop"></i> تلقائي (النظام)
+        </button>
+    </div>
+</div>
                 <!-- About Section -->
                 <div class="settings-section">
                     <h2><i class="fa-solid fa-circle-info"></i> عن القهوة</h2>
                     
                     <div style="text-align: center; margin-top: 1rem;">
-                        <div style="width: 80px; height: 80px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden;">
+                        <div style="width: 200px; height: 200px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden;">
                              <img src="images/logo1.png" style="width: 100%; height: 100%; object-fit: cover;" alt="">
                         </div>
                         <h3 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: var(--primary-blue);">
