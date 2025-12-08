@@ -4,7 +4,7 @@ import {
     getUserData, 
     updateUserProfile, 
     deleteUserAccount,
-    changeUserPassword // <--- Imported
+    changeUserPassword 
 } from './auth-service.js';
 
 // Predefined profile images
@@ -16,13 +16,15 @@ const profileImages = [
     "images/profile/13.jpg", "images/profile/14.jpg", "images/profile/15.jpg",
     "images/profile/16.jpg", "images/profile/17.jpg", "images/profile/18.jpg",
     "images/profile/19.jpg", "images/profile/20.jpg", "images/profile/21.jpg",
-    "images/profile/22.jpg", "images/profile/23.jpg", "images/profile/24.jpg"
-    // "images/profile/mmssb.jpg"
+    "images/profile/22.jpg", "images/profile/23.jpg", "images/profile/24.jpg",
+    "images/profile/25.jpg", "images/profile/26.png", "images/profile/27.jpg",
+    "images/profile/28.jpg", "images/profile/29.jpg"
 ];
 
 let currentUser = null;
 let userData = {}; 
 let selectedImage = '';
+let isCustomLinkMode = false;
 
 document.addEventListener('DOMContentLoaded', () => {
     onAuthStateChanged(auth, async (user) => {
@@ -49,10 +51,8 @@ async function loadUserData() {
 }
 
 function updateUI() {
-    // Safety check
     const data = userData || {};
 
-    // 1. Sidebar Elements
     if(document.getElementById('sidebarName')) 
         document.getElementById('sidebarName').textContent = data.fullName || 'الزبون';
     
@@ -63,7 +63,6 @@ function updateUI() {
     if(document.getElementById('sidebarImage')) 
         document.getElementById('sidebarImage').src = currentImg;
     
-    // 2. Form Inputs
     const fullName = data.fullName || '';
     const nameParts = fullName.split(' ');
     
@@ -78,10 +77,7 @@ function updateUI() {
 
     if(firstNameInput) firstNameInput.value = firstName;
     if(lastNameInput) lastNameInput.value = lastName;
-    
-    // Set Bio with Default
     if(bioInput) bioInput.value = data.bio || 'أنا جديد في القهوة';
-
     if(emailInput) emailInput.value = currentUser.email || data.email || '';
     if(eduInput) eduInput.value = data.educationLevel || 'طالب';
 }
@@ -107,12 +103,19 @@ function setupEventListeners() {
 
     const cancelImgBtn = document.getElementById('cancelImageSelect');
     const confirmImgBtn = document.getElementById('confirmImageSelect');
-    const closeImgIcon = document.querySelector('#imageModal .close'); // Deprecated if using new modal style, but kept for safety
 
     if(cancelImgBtn) cancelImgBtn.addEventListener('click', closeImageModal);
     if(confirmImgBtn) confirmImgBtn.addEventListener('click', saveNewProfileImage);
 
-    // 3. Password Modal Triggers (NEW)
+    // Custom Link Input Listener
+    const customUrlInput = document.getElementById('customImageUrl');
+    if (customUrlInput) {
+        customUrlInput.addEventListener('input', (e) => {
+            handleCustomUrlInput(e.target.value);
+        });
+    }
+
+    // 3. Password Modal Triggers
     const triggerPassBtn = document.getElementById('triggerPasswordModal');
     const passModal = document.getElementById('passwordModal');
     const closePassBtn = document.getElementById('closePassModal');
@@ -142,7 +145,6 @@ function setupEventListeners() {
     const deleteBtn = document.getElementById('deleteAccountBtn');
     if (deleteBtn) deleteBtn.addEventListener('click', setupDeleteAccount);
 
-    // Global Click to Close Modals
     window.onclick = (e) => {
         const imgModal = document.getElementById('imageModal');
         const delModal = document.getElementById('deleteModal');
@@ -154,7 +156,6 @@ function setupEventListeners() {
     };
 }
 
-// --- Password Change Logic (NEW) ---
 async function handlePasswordChange() {
     const oldPass = document.getElementById('oldPassword').value;
     const newPass = document.getElementById('newPassword').value;
@@ -195,27 +196,119 @@ async function handlePasswordChange() {
 function openImageModal() {
     const modal = document.getElementById('imageModal');
     const grid = document.getElementById('imageGrid');
+    const customInput = document.getElementById('customImageInput');
+    const errorMsg = document.getElementById('imgPreviewError');
     
     if(!modal || !grid) return;
+
+    // Hide input and error initially
+    customInput.style.display = 'none';
+    if(errorMsg) errorMsg.style.display = 'none';
+    isCustomLinkMode = false;
+    document.getElementById('customImageUrl').value = '';
 
     const currentImage = userData?.profileImage || 'images/user.png';
     selectedImage = currentImage;
 
-    grid.innerHTML = profileImages.map(img => `
+    // Generate Grid with "+" option at the start
+    let html = `
+        <div class="image-option" style="display:flex; align-items:center; justify-content:center; background:#eee;" 
+             onclick="window.toggleCustomLink(this)">
+            <i class="fa-solid fa-plus" style="font-size: 2rem; color: var(--text-grey);"></i>
+        </div>
+    `;
+
+    html += profileImages.map(img => `
         <div class="image-option ${currentImage === img ? 'selected' : ''}" 
              onclick="window.handleImageSelect(this, '${img}')">
             <img src="${img}" onerror="this.src='images/user.png'">
         </div>
     `).join('');
 
+    grid.innerHTML = html;
     modal.style.display = 'flex';
 }
 
 window.handleImageSelect = function(el, imgSrc) {
     document.querySelectorAll('.image-option').forEach(opt => opt.classList.remove('selected'));
     el.classList.add('selected');
+    
+    // Hide custom input if a standard image is picked
+    document.getElementById('customImageInput').style.display = 'none';
+    isCustomLinkMode = false;
+    
     selectedImage = imgSrc;
 };
+
+window.toggleCustomLink = function(el) {
+    document.querySelectorAll('.image-option').forEach(opt => opt.classList.remove('selected'));
+    el.classList.add('selected');
+    
+    const inputDiv = document.getElementById('customImageInput');
+    inputDiv.style.display = 'block';
+    isCustomLinkMode = true;
+};
+
+function handleCustomUrlInput(url) {
+    const preview = document.getElementById('customImagePreview');
+    const errorMsg = document.getElementById('imgPreviewError');
+    
+    if (!url) {
+        preview.style.display = 'none';
+        errorMsg.style.display = 'none';
+        return;
+    }
+
+    // --- Google Drive Link Converter (IMPROVED) ---
+    // Old: uc?export=view (Blocked often)
+    // New: thumbnail?sz=w1000 (Very Reliable)
+    
+    let finalUrl = url;
+    
+    // Check for standard Drive Links or 'open?id=' links
+    if (url.includes('drive.google.com')) {
+        let fileId = null;
+
+        // Try to match /d/ID
+        const idMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+        
+        // Try to match id=ID
+        const queryMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+
+        if (idMatch && idMatch[1]) {
+            fileId = idMatch[1];
+        } else if (queryMatch && queryMatch[1]) {
+            fileId = queryMatch[1];
+        }
+
+        if (fileId) {
+            // Using the Thumbnail endpoint which is more permissive
+            finalUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
+        }
+    }
+
+    selectedImage = finalUrl;
+    
+    // Reset state
+    preview.style.display = 'inline-block';
+    preview.style.border = '2px solid var(--border-color)';
+    errorMsg.style.display = 'none';
+    
+    // Set src
+    preview.src = finalUrl;
+    
+    // Handle error in preview
+    preview.onerror = () => {
+        preview.style.border = '2px solid red';
+        errorMsg.style.display = 'block';
+        // Give user a hint if it fails
+        errorMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> الصورة مش بتحمل! اتأكد إنها Public <br> (General Access -> Anyone with the link)';
+    };
+    preview.onload = () => {
+        preview.style.border = '2px solid green';
+        errorMsg.style.display = 'none';
+    };
+}
 
 function closeImageModal() {
     const modal = document.getElementById('imageModal');
@@ -224,18 +317,35 @@ function closeImageModal() {
 
 async function saveNewProfileImage() {
     const btn = document.getElementById('confirmImageSelect');
+    const errorMsg = document.getElementById('imgPreviewError');
     const originalText = btn.textContent;
+    
+    // Prevent saving if there is an error
+    if (isCustomLinkMode && errorMsg.style.display === 'block') {
+        alert('الصورة مش شغالة! اتأكد من اللينك الأول.');
+        return;
+    }
+    
+    // Use the custom link if in custom mode, otherwise selectedImage
+    let imageToSave = selectedImage;
+
+    // Basic Validation
+    if (!imageToSave) {
+        alert("اختار صورة يا فنان!");
+        return;
+    }
+
     btn.textContent = 'جاري الحفظ...';
     btn.disabled = true;
 
-    const result = await updateUserProfile({ profileImage: selectedImage });
+    const result = await updateUserProfile({ profileImage: imageToSave });
     
     if (result.success) {
-        userData.profileImage = selectedImage;
+        userData.profileImage = imageToSave;
         updateUI(); 
         
         const navImg = document.querySelector('.user-avatar img');
-        if(navImg) navImg.src = selectedImage;
+        if(navImg) navImg.src = imageToSave;
         
         closeImageModal();
         alert('تم تغيير الصورة يا جميل!');
