@@ -846,3 +846,19 @@ function setupDeleteAccount() {
     cancelBtn.onclick = closeModal;
     if(closeBtn) closeBtn.onclick = closeModal;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
