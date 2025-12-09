@@ -459,7 +459,8 @@ const profileImages = [
     "images/profile/19.jpg", "images/profile/20.jpg", "images/profile/21.jpg",
     "images/profile/22.jpg", "images/profile/23.jpg", "images/profile/24.jpg",
     "images/profile/25.jpg", "images/profile/26.png", "images/profile/27.jpg",
-    "images/profile/28.jpg", "images/profile/29.jpg", "images/profile/pro/no-user.webp"
+    "images/profile/28.jpg", "images/profile/29.jpg" 
+    // "images/profile/pro/no-user.webp"
 ];
 
 let currentUser = null;
@@ -846,6 +847,7 @@ function setupDeleteAccount() {
     cancelBtn.onclick = closeModal;
     if(closeBtn) closeBtn.onclick = closeModal;
 }
+
 
 
 
