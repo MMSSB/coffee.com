@@ -817,6 +817,7 @@ async function searchUsers(searchTerm) {
         if (!searchTerm) return { success: true, data: [] };
         const lowerTerm = searchTerm.toLowerCase();
         const usersRef = collection(db, "users");
+        // Simple prefix search
         const q = query(usersRef, where("searchKey", ">=", lowerTerm), where("searchKey", "<=", lowerTerm + '\uf8ff'));
         const querySnapshot = await getDocs(q);
         const users = [];
@@ -872,7 +873,9 @@ async function getUserPosts(uid) {
         const posts = []; snap.forEach(d => posts.push({id:d.id, ...d.data()}));
         return { success: true, data: posts };
     } catch (error) {
+        // Fallback for missing index error
         if (error.code === 'failed-precondition' || error.message.includes("index")) {
+            console.warn("Index missing for getUserPosts. Falling back to client-side filtering.");
             const allQ = query(collection(db, "posts"), orderBy("timestamp", "desc"));
             const snap = await getDocs(allQ);
             const posts = [];
@@ -883,42 +886,63 @@ async function getUserPosts(uid) {
     }
 }
 
-async function toggleLike(postId, type = null) {
+async function toggleLike(postId, type = null, collectionName = 'posts') {
     const user = auth.currentUser; if (!user) return { success: false };
     try {
-        const postRef = doc(db, 'posts', postId);
+        const postRef = doc(db, collectionName, postId);
         if (type) await updateDoc(postRef, { [`reactions.${user.uid}`]: type });
         else await updateDoc(postRef, { [`reactions.${user.uid}`]: deleteField() });
         return { success: true };
     } catch (e) { return { success: false, error: e.message }; }
 }
 
-async function deletePost(postId) {
-    try { await deleteDoc(doc(db, 'posts', postId)); return { success: true }; } catch (e) { return { success: false, error: e.message }; }
+async function deletePost(postId, collectionName = 'posts') {
+    try { await deleteDoc(doc(db, collectionName, postId)); return { success: true }; } catch (e) { return { success: false, error: e.message }; }
 }
 
-async function addComment(postId, content) {
+async function addComment(postId, content, collectionName = 'posts') {
     const user = auth.currentUser; if (!user) return { success: false };
     try {
-        await addDoc(collection(db, 'posts', postId, "comments"), { content:content, authorId:user.uid, authorName:user.displayName, authorImage:user.photoURL, timestamp:serverTimestamp() });
-        await updateDoc(doc(db, 'posts', postId), { commentsCount: increment(1) });
+        let name = user.displayName||"زبون"; let img = user.photoURL||"images/user.png";
+        if(collectionName === 'secrets'){ name="فاعل خير"; img="anonymous"; }
+        
+        await addDoc(collection(db, collectionName, postId, "comments"), { 
+            content: content, 
+            authorId: user.uid, 
+            authorName: name, 
+            authorImage: img, 
+            timestamp: serverTimestamp() 
+        });
+        
+        await updateDoc(doc(db, collectionName, postId), { commentsCount: increment(1) });
         return { success: true };
     } catch (e) { return { success: false, error: e.message }; }
 }
 
-async function getComments(postId) {
+async function getComments(postId, collectionName = 'posts') {
     try {
-        const q = query(collection(db, 'posts', postId, "comments"), orderBy("timestamp", "asc"));
+        const q = query(collection(db, collectionName, postId, "comments"), orderBy("timestamp", "asc"));
         const snap = await getDocs(q);
         const data = []; snap.forEach(d => data.push({id:d.id, ...d.data()}));
         return { success: true, data: data };
     } catch (e) { return { success: false, error: e.message }; }
 }
 
+// ================= SECRETS (FADFADA) =================
+
 async function createSecret(content) {
-    const user = auth.currentUser; if (!user) return { success: false };
+    const user = auth.currentUser;
+    if (!user) return { success: false, error: "Login required" };
     try {
-        await addDoc(collection(db, "secrets"), { authorId: user.uid, fakeName: "بير الأسرار", content: content, timestamp: serverTimestamp(), reactions: {}, commentsCount: 0, type: 'secret' });
+        await addDoc(collection(db, "secrets"), { 
+            authorId: user.uid, 
+            fakeName: "بير الأسرار", 
+            content: content, 
+            timestamp: serverTimestamp(), 
+            reactions: {}, 
+            commentsCount: 0, 
+            type: 'secret' 
+        });
         return { success: true };
     } catch (error) { return { success: false, error: error.message }; }
 }
@@ -932,22 +956,58 @@ async function getSecrets() {
     } catch (error) { return { success: false, error: error.message }; }
 }
 
+// ================= NOTIFICATIONS =================
+
 async function createNotification(targetUid, type, message, extraData = {}) {
-    try { await addDoc(collection(db, "notifications"), { userId: targetUid, type: type, message: message, read: false, timestamp: serverTimestamp(), ...extraData }); } catch (e) {}
+    try {
+        await addDoc(collection(db, "notifications"), {
+            userId: targetUid, 
+            type: type, 
+            message: message, 
+            read: false, 
+            timestamp: serverTimestamp(), 
+            ...extraData
+        });
+        return { success: true };
+    } catch (e) { 
+        console.error("Notif Error:", e); 
+        return { success: false, error: e.message };
+    }
 }
 
 async function getNotifications() {
-    const user = auth.currentUser; if (!user) return { success: false };
+    const user = auth.currentUser;
+    if (!user) return { success: false, error: "No User" };
     try {
+        // Try the ordered query
         const q = query(collection(db, "notifications"), where("userId", "==", user.uid), orderBy("timestamp", "desc"));
         const snap = await getDocs(q);
-        const data = []; snap.forEach(d => data.push({ id: d.id, ...d.data() }));
+        const data = []; 
+        snap.forEach(d => data.push({ id: d.id, ...d.data() }));
         return { success: true, data: data };
-    } catch (e) { return { success: false, error: e.message }; }
+    } catch (e) {
+        // Handle "Missing Index" error by fetching unordered and sorting locally
+        if(e.message.includes("index")) {
+            console.warn("Notification index missing. Sorting locally.");
+            const q2 = query(collection(db, "notifications"), where("userId", "==", user.uid));
+            const snap = await getDocs(q2);
+            const data = []; 
+            snap.forEach(d => data.push({ id: d.id, ...d.data() }));
+            // Sort Descending
+            data.sort((a, b) => {
+                const tA = a.timestamp ? a.timestamp.seconds : 0;
+                const tB = b.timestamp ? b.timestamp.seconds : 0;
+                return tB - tA;
+            });
+            return { success: true, data: data };
+        }
+        return { success: false, error: e.message };
+    }
 }
 
 async function markNotificationRead(notifId) {
-    try { await updateDoc(doc(db, "notifications", notifId), { read: true }); return { success: true }; } catch (e) { return { success: false, error: e.message }; }
+    try { await updateDoc(doc(db, "notifications", notifId), { read: true }); return { success: true }; } 
+    catch (e) { return { success: false, error: e.message }; }
 }
 
 // ================= FRIENDS =================
@@ -958,10 +1018,15 @@ async function getFriendshipStatus(targetUid) {
     const userDoc = await getDoc(doc(db, "users", user.uid));
     const friends = userDoc.data()?.friends || [];
     if (friends.includes(targetUid)) return 'friends';
+    
+    // Check outgoing requests
     const outQ = query(collection(db, "friendRequests"), where("from", "==", user.uid), where("to", "==", targetUid));
     if (!(await getDocs(outQ)).empty) return 'pending_sent';
+    
+    // Check incoming requests
     const inQ = query(collection(db, "friendRequests"), where("from", "==", targetUid), where("to", "==", user.uid));
     if (!(await getDocs(inQ)).empty) return 'pending_received';
+    
     return 'none';
 }
 
@@ -969,15 +1034,18 @@ async function sendFriendRequest(targetUid) {
     const user = auth.currentUser; if (!user) return { success: false };
     try {
         const q = query(collection(db, "friendRequests"), where("from", "==", user.uid), where("to", "==", targetUid));
-        if(!(await getDocs(q)).empty) return { success: true };
-        await addDoc(collection(db, "friendRequests"), { from: user.uid, to: targetUid, timestamp: serverTimestamp(), status: 'pending' });
+        if(!(await getDocs(q)).empty) return { success: true }; // Already sent
+        
+        await addDoc(collection(db, "friendRequests"), { 
+            from: user.uid, to: targetUid, timestamp: serverTimestamp(), status: 'pending' 
+        });
         await createNotification(targetUid, 'friend_request', `${user.displayName} بعتلك طلب صداقة`, { senderId: user.uid });
         return { success: true };
     } catch (e) { return { success: false, error: e.message }; }
 }
 
 async function getIncomingRequests() {
-    const user = auth.currentUser; if (!user) return { success: false };
+    const user = auth.currentUser; if (!user) return { success: false, error: "No User" };
     try {
         const q = query(collection(db, "friendRequests"), where("to", "==", user.uid), where("status", "==", "pending"));
         const snap = await getDocs(q);
@@ -995,9 +1063,20 @@ async function acceptFriendRequest(requestId, senderUid) {
     const user = auth.currentUser; if (!user) return { success: false };
     try {
         const batch = writeBatch(db);
+        // Add to both friends lists
         batch.update(doc(db, "users", user.uid), { friends: arrayUnion(senderUid) });
         batch.update(doc(db, "users", senderUid), { friends: arrayUnion(user.uid) });
-        batch.delete(doc(db, "friendRequests", requestId));
+        
+        // Sometimes requestId isn't passed if we accept from profile, so handle deletion carefully
+        if (requestId && requestId !== 'dummy' && requestId !== 'dummy_req_id') {
+             batch.delete(doc(db, "friendRequests", requestId));
+        } else {
+             // Find request manually to delete
+             const q = query(collection(db, "friendRequests"), where("from", "==", senderUid), where("to", "==", user.uid));
+             const snap = await getDocs(q);
+             snap.forEach(d => batch.delete(d.ref));
+        }
+
         await batch.commit();
         await createNotification(senderUid, 'request_accepted', `${user.displayName} قبل طلب الصداقة`, { friendId: user.uid });
         return { success: true };
@@ -1005,7 +1084,8 @@ async function acceptFriendRequest(requestId, senderUid) {
 }
 
 async function denyFriendRequest(requestId) {
-    try { await deleteDoc(doc(db, "friendRequests", requestId)); return { success: true }; } catch (e) { return { success: false, error: e.message }; }
+    try { await deleteDoc(doc(db, "friendRequests", requestId)); return { success: true }; } 
+    catch (e) { return { success: false, error: e.message }; }
 }
 
 async function removeFriend(friendUid) {
@@ -1025,7 +1105,9 @@ async function getUserFriends(uid) {
         if (!docSnap.exists()) return { success: true, data: [] };
         const friendIds = docSnap.data().friends || [];
         if (friendIds.length === 0) return { success: true, data: [] };
+        
         const friendsData = [];
+        // Limit to 20 to save reads
         for (const fid of friendIds.slice(0, 20)) {
             const fDoc = await getDoc(doc(db, "users", fid));
             if (fDoc.exists()) friendsData.push({ id: fDoc.id, ...fDoc.data() });
@@ -1034,7 +1116,7 @@ async function getUserFriends(uid) {
     } catch (e) { return { success: false, error: e.message }; }
 }
 
-// ================= GAMES (RESTORED) =================
+// ================= GAMES =================
 
 async function createOnlineGame() {
     const user = auth.currentUser; if (!user) return { success: false, error: "Login first" };
@@ -1197,7 +1279,6 @@ function subscribeToChatList(callback) {
     });
 }
 
-// --- NEW: User Status Listener ---
 function subscribeToUserStatus(uid, callback) {
     const statusRef = ref(rtdb, `/status/${uid}`);
     return onValue(statusRef, (snapshot) => {
@@ -1219,6 +1300,6 @@ export {
     // GAMES
     createOnlineGame, joinOnlineGame, makeOnlineMove, resetOnlineGame, sendGameInvite,
     createChessGame, joinChessGame, makeChessMove,
-    // CHAT
+    // CHAT & STATUS
     sendMessage, subscribeToChat, subscribeToChatList, subscribeToUserStatus
 };
